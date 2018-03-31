@@ -1,7 +1,7 @@
 # U-Net-Pytorch
-implementation of U-Net in Pytorch
+Implementation of U-Net in Pytorch
 
-##Directory Tree
+## Directory Tree
 
 ```
 +checkpoints_unet
