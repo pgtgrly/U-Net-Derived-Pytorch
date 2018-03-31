@@ -25,11 +25,10 @@ n_iters = 50000 #total iterations
 learning_rate = 0.01
 train_directory="train"
 validation_directory="validation"
-test_directory="test"
 checkpoints_directory_unet="checkpoints_unet"
 optimizer_checkpoints_directory_unet="optimizer_checkpoints_unet"
 graphs_unet_directory="graphs_unet"
-test_batch_size=1
+validation_batch_size=1
 threshold=128
 
 class ImageDataset(Dataset): #Defining the class to load datasets
@@ -74,7 +73,7 @@ class ImageDataset(Dataset): #Defining the class to load datasets
         sample['masks']= sample['masks'].reshape((256,256,1)).transpose((2, 0, 1))
 
         sample['image'].astype(float)
-        sample['image']=sample['image']/255 
+        sample['image']=sample['image']/255 #image being rescaled to contain values between 0 to 1 for BCE Loss
         sample['masks'].astype(float)
         sample['masks']=sample['masks']/255
 
@@ -82,7 +81,6 @@ class ImageDataset(Dataset): #Defining the class to load datasets
         return sample
 
 train_dataset=ImageDataset(input_dir=train_directory,transform=True) #Training Dataset
-test_dataset=ImageDataset(input_dir=test_directory,transform=False) #Testing Dataset
 validation_dataset=ImageDataset(input_dir=validation_directory,transform=True) #Validation Dataset
 
 num_epochs = n_iters / (len(train_dataset) / batch_size)
@@ -92,12 +90,8 @@ train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                            batch_size=batch_size, 
                                            shuffle=True)
 
-test_loader = torch.utils.data.DataLoader(dataset=test_dataset, 
-                                          batch_size=test_batch_size, 
-                                          shuffle=False)
-
 validation_loader = torch.utils.data.DataLoader(dataset=validation_dataset, 
-                                          batch_size=test_batch_size, 
+                                          batch_size=validation_batch_size, 
                                           shuffle=False)
 
 
@@ -122,16 +116,16 @@ if not os.path.exists(graphs_unet_directory):
 if torch.cuda.is_available(): #use gpu if available
     model.cuda() 
 
-criterion=nn.BCELoss()  #Loss Class
+criterion=nn.BCELoss()  #Loss Class #BCE Loss has been used here to determine if the pixel belogs to class or not.(This is the case of segmentation of a single class)
 optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate) #optimizer class
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)# this will decrease the learning rate by factor of 0.1
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)# this will decrease the learning rate by factor of 0.1 every 10 epochs
                                                                               
                                                                               # https://discuss.pytorch.org/t/can-t-import-torch-optim-lr-scheduler/5138/6 
 
 if  os.path.exists(optimizer_checkpoints_directory_unet) and len(os.listdir(optimizer_checkpoints_directory_unet)):
     checkpoints = os.listdir(optimizer_checkpoints_directory_unet)
     checkpoints.sort(key=lambda x:int((x.split('_')[2]).split('.')[0]))
-    optimizer.load_state_dict(torch.load(optimizer_checkpoints_directory_unet+'/'+checkpoints[-1])) # is this check or should it be checkpoints? changed it to checkpoints.    print("Resuming optimizer")
+    optimizer.load_state_dict(torch.load(optimizer_checkpoints_directory_unet+'/'+checkpoints[-1])) 
     print("Resuming Optimizer from iteration " + str(iteri))
 elif not os.path.exists(optimizer_checkpoints_directory_unet):
     os.makedirs(optimizer_checkpoints_directory_unet)
@@ -167,8 +161,8 @@ for epoch in range(num_epochs):
             # Calculate Accuracy         
             validation_loss = 0
             total = 0
-            # Iterate through test dataset
-            for j,datapoint_1 in enumerate(validation_loader): #for testing
+            # Iterate through validation dataset
+            for j,datapoint_1 in enumerate(validation_loader): #for validation
                 datapoint_1['image']=datapoint_1['image'].type(torch.FloatTensor)
                 datapoint_1['masks']=datapoint_1['masks'].type(torch.FloatTensor)
 
@@ -185,7 +179,7 @@ for epoch in range(num_epochs):
                 outputs_1 = model(input_image_1)
                 validation_loss += criterion(outputs_1, output_image_1).data[0]
                 total+=datapoint_1['masks'].size(0)
-            validation_loss=validation_loss   #sum of test loss for all test cases/total cases
+            validation_loss=validation_loss
             writer.add_scalar('Validation Loss',validation_loss, iteri) 
             # Print Loss
             time_since_beg=(time.time()-beg)/60
@@ -193,7 +187,7 @@ for epoch in range(num_epochs):
         if iteri % 500 ==0:
             torch.save(model,checkpoints_directory_unet+'/model_iter_'+str(iteri)+'.pt')
             torch.save(optimizer.state_dict(),optimizer_checkpoints_directory_unet+'/model_iter_'+str(iteri)+'.pt')
-            print("model adnd optimizer saved at iteration : "+str(iteri))
+            print("model and optimizer saved at iteration : "+str(iteri))
             writer.export_scalars_to_json(graphs_unet_directory+"/all_scalars_"+str(iter_new)+".json") #saving loss vs iteration data to be used by visualise.py
     scheduler.step()            
 writer.close()
