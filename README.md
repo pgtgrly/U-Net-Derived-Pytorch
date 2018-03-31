@@ -47,3 +47,5 @@ will give output in the folder containing script as Output_unet.png
 9. data_augment.py: Contains data augmentation class.It is used to augment data during training the Unet.
 
 10. networks.py: Unet Network architecture is defined here.
+
+Note: This network is compatible with Pytorch 0.3.0 . The next version of Pytorch might cause some major syntax changes.
