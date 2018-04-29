@@ -1,5 +1,5 @@
-# U-Net-Pytorch
-Implementation of U-Net in Pytorch
+# U-Net-Dervived-Pytorch
+Implementation of a semantic architectured derived from U-Net in Pytorch
 
 ## Directory Tree
 
