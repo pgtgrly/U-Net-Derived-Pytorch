@@ -103,7 +103,11 @@ iter_new=0
 if os.path.exists(checkpoints_directory_unet) and len(os.listdir(checkpoints_directory_unet)):
     checkpoints = os.listdir(checkpoints_directory_unet)
     checkpoints.sort(key=lambda x:int((x.split('_')[2]).split('.')[0]))
-    model=torch.load(checkpoints_directory_unet+'/'+checkpoints[-1]) #changed to checkpoints
+    if torch.cuda.is_available():
+    	model=torch.load(checkpoints_directory_unet+'/'+checkpoints[-1]) #changed to checkpoints
+    else:
+    	model=torch.load(checkpoints_directory_unet+'/'+checkpoints[-1],map_location='cpu')
+    	
     iteri=int(re.findall(r'\d+',checkpoints[-1])[0]) # changed to checkpoints
     iter_new=iteri
     print("Resuming from iteration " + str(iteri))
