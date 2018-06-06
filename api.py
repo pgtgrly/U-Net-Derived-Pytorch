@@ -4,7 +4,6 @@ import os
 from torch.autograd import Variable
 import numpy as np
 import cv2
-from networks import unet
 from sys import argv
 
 
@@ -16,11 +15,17 @@ script, img_path = argv
 
 checkpoints_unet= os.listdir(checkpoints_directory_unet)
 checkpoints_unet.sort(key=lambda x:int((x.split('_')[2]).split('.')[0]))
-model_unet = torch.load(checkpoints_directory_unet+'/'+checkpoints_unet[-1])
+if torch.cuda.is_available():
+    model_unet=torch.load(checkpoints_directory_unet+'/'+checkpoints_unet[-1])
+    model_unet.cuda() 
+ #changed to checkpoints
+else:
+   	model_unet=torch.load(checkpoints_directory_unet+'/'+checkpoints_unet[-1],map_location={'cuda:0': 'cpu'})
+
+print("using " + checkpoints_unet[-1])
 
 model_unet.eval()
-if torch.cuda.is_available(): #use gpu if available
-    model_unet.cuda() 
+
 
 image = cv2.imread(img_path)
 orig_width,orig_height=image.shape[0],image.shape[1]
@@ -43,7 +48,6 @@ if torch.cuda.is_available(): #use gpu if available
     input_unet = Variable(input_unet.cuda()) 
 else:
 	input_unet = Variable(input_unet)
-
 
 out_unet = model_unet(input_unet)
 

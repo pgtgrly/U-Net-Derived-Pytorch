@@ -106,7 +106,7 @@ if os.path.exists(checkpoints_directory_unet) and len(os.listdir(checkpoints_dir
     if torch.cuda.is_available():
     	model=torch.load(checkpoints_directory_unet+'/'+checkpoints[-1]) #changed to checkpoints
     else:
-    	model=torch.load(checkpoints_directory_unet+'/'+checkpoints[-1],map_location='cpu')
+    	model=torch.load(checkpoints_directory_unet+'/'+checkpoints[-1],map_location={'cuda:0': 'cpu'})
     	
     iteri=int(re.findall(r'\d+',checkpoints[-1])[0]) # changed to checkpoints
     iter_new=iteri
